@@ -1,0 +1,21 @@
+[project]
+name = "pocket-joe-mcp-toys"
+version = "0.1.0"
+description = "MCP servers built with pocket-joe - YouTube transcription and more"
+requires-python = ">=3.12"
+dependencies = [
+    "pocket-joe",
+    "mcp>=1.0.0",
+    "uvicorn>=0.30.0",
+    "requests>=2.28.0",
+    "beautifulsoup4>=4.11.0",
+    "youtube-transcript-api>=0.6.0",
+    "starlette>=0.37.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["."]
