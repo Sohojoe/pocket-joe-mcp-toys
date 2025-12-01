@@ -2,17 +2,14 @@
 
 import os
 import re
+import sys
+import asyncio
 from typing import Any
 
 import requests
-import uvicorn
 from bs4 import BeautifulSoup
-from mcp.server import Server
-from mcp.server.streamable_http import StreamableHTTPServerTransport
-from mcp.types import Tool
-from starlette.applications import Starlette
-from starlette.routing import Route
 from youtube_transcript_api import YouTubeTranscriptApi
+from fastmcp import FastMCP
 
 from pocket_joe import BaseContext, InMemoryRunner, Message, Policy, policy_spec_mcp_tool
 from pocket_joe.policy_spec_mcp import get_policy_spec
@@ -80,33 +77,31 @@ class TranscribeYouTubePolicy(Policy):
             ]
 
 
-# Create MCP server
-mcp = Server("youtube-transcriber")
+# Create FastMCP server
+mcp = FastMCP("youtube-transcriber")
+
+# Initialize pocket-joe context
+runner = InMemoryRunner()
 class AppContext(BaseContext):
     def __init__(self, runner):
         super().__init__(runner)
         self.transcribe_yt = self._bind(TranscribeYouTubePolicy)
-runner = InMemoryRunner()
+
 ctx = AppContext(runner)
 
 
-@mcp.list_tools()
-async def list_tools() -> list[Tool]:
-    """List available MCP tools."""
-    spec = get_policy_spec(TranscribeYouTubePolicy)
-    return [
-        Tool(
-            name=spec.name,
-            description=spec.description,
-            inputSchema=spec.input_schema
-        )
-    ]
-
-
-@mcp.call_tool()
-async def call_tool(name: str, arguments: dict[str, Any]) -> dict[str, Any]:
-    """Execute MCP tool by calling the corresponding policy."""
-    msgs = await ctx.transcribe_yt(**arguments)
+@mcp.tool()
+async def transcribe_youtube(url: str) -> dict[str, Any]:
+    """
+    Get video title, transcript and thumbnail from YouTube URL.
+    
+    Args:
+        url: YouTube video URL
+        
+    Returns:
+        Dictionary containing title, transcript, thumbnail_url, and video_id
+    """
+    msgs = await ctx.transcribe_yt(url=url)
     
     for msg in msgs:
         if msg.type == "action_result":
@@ -117,50 +112,26 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> dict[str, Any]:
     return {"error": "Policy returned no result"}
 
 
-# StreamableHTTP endpoint handler
-async def handle_mcp(request):
-    """Handle StreamableHTTP transport for MCP."""
-    async with StreamableHTTPServerTransport(request) as transport:
-        await mcp.run(
-            transport.read_stream,
-            transport.write_stream,
-            mcp.create_initialization_options()
-        )
-
-
-# Health check endpoint
-async def health_check(request):
-    """Health check endpoint."""
-    from starlette.responses import JSONResponse
-    spec = get_policy_spec(TranscribeYouTubePolicy)
-    return JSONResponse({
-        "status": "ok",
-        "server": "youtube-transcriber",
-        "mcp_version": "1.0",
-        "tools": [spec.name],
-        "endpoints": {
-            "mcp": "/mcp",
-            "health": "/"
-        },
-        "supported_clients": [
-            "Claude Desktop",
-            "Cline (VS Code)",
-            "Continue (VS Code)",
-            "MCP Inspector"
-        ],
-        "note": "ChatGPT does not support MCP protocol yet"
-    })
-
-
-# Starlette app
-app = Starlette(
-    routes=[
-        Route("/", endpoint=health_check),
-        Route("/mcp", endpoint=handle_mcp, methods=["POST"]),
-    ]
-)
-
-
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8000))
-    uvicorn.run(app, host="0.0.0.0", port=port)
+    port = int(os.getenv("PORT", 8000))
+    is_deployment = os.getenv("PORT") is not None or os.getenv("RAILWAY_ENVIRONMENT") is not None
+    is_stdio_mode = not sys.stdin.isatty() and not is_deployment
+    
+    if is_stdio_mode:
+        # Run in stdio mode for local MCP clients
+        async def run_server():
+            await mcp.run_stdio_async()
+        
+        asyncio.run(run_server())
+    else:
+        # Run in HTTP mode for Railway/web deployment
+        print(f"Running MCP HTTP server on port {port}")
+        async def run_server():
+            await mcp.run_http_async(
+                host="0.0.0.0",
+                port=port,
+                path="/",
+                log_level="debug"
+            )
+        
+        asyncio.run(run_server())

@@ -5,12 +5,11 @@ description = "MCP servers built with pocket-joe - YouTube transcription and mor
 requires-python = ">=3.12"
 dependencies = [
     "pocket-joe",
-    "mcp>=1.0.0",
+    "fastmcp>=2.0.0",
     "uvicorn>=0.30.0",
     "requests>=2.28.0",
     "beautifulsoup4>=4.11.0",
     "youtube-transcript-api>=0.6.0",
-    "starlette>=0.37.0",
 ]
 
 [build-system]
