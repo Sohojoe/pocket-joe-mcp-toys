@@ -78,7 +78,7 @@ class TranscribeYouTubePolicy(Policy):
 
 
 # Create FastMCP server
-mcp = FastMCP("youtube-transcriber")
+mcp = FastMCP("pocket-joe-mcp-toys")
 
 # Initialize pocket-joe context
 runner = InMemoryRunner()
