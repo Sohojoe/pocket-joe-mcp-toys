@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """YouTube MCP Server - Railway deployment with pocket-joe policies."""
 
 import os
