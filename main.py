@@ -92,6 +92,7 @@ ctx = None
 async def startup():
     """Initialize the application."""
     global runner, ctx
+    print("Starting up MCP server...")
     runner = InMemoryRunner()
     
     class AppContext(BaseContext):
@@ -100,6 +101,7 @@ async def startup():
             self.transcribe_yt = self._bind(TranscribeYouTubePolicy)
     
     ctx = AppContext(runner)
+    print("Startup complete!")
 
 async def cleanup():
     """Clean up resources."""
@@ -134,6 +136,9 @@ if __name__ == "__main__":
     port = int(os.getenv("PORT", 8000))
     is_deployment = os.getenv("PORT") is not None or os.getenv("RAILWAY_ENVIRONMENT") is not None
     is_stdio_mode = not sys.stdin.isatty() and not is_deployment
+    
+    print(f"Environment: PORT={os.getenv('PORT')}, RAILWAY={os.getenv('RAILWAY_ENVIRONMENT')}")
+    print(f"Running mode: deployment={is_deployment}, stdio={is_stdio_mode}")
     
     if is_stdio_mode:
         # Run in stdio mode for local MCP clients
