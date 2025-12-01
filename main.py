@@ -128,9 +128,34 @@ async def handle_sse(request):
         )
 
 
+# Health check endpoint
+async def health_check(request):
+    """Health check endpoint."""
+    from starlette.responses import JSONResponse
+    spec = get_policy_spec(TranscribeYouTubePolicy)
+    return JSONResponse({
+        "status": "ok",
+        "server": "youtube-transcriber",
+        "mcp_version": "1.0",
+        "tools": [spec.name],
+        "endpoints": {
+            "sse": "/sse",
+            "health": "/"
+        },
+        "supported_clients": [
+            "Claude Desktop",
+            "Cline (VS Code)",
+            "Continue (VS Code)",
+            "MCP Inspector"
+        ],
+        "note": "ChatGPT does not support MCP protocol yet"
+    })
+
+
 # Starlette app
 app = Starlette(
     routes=[
+        Route("/", endpoint=health_check),
         Route("/sse", endpoint=handle_sse),
     ]
 )
