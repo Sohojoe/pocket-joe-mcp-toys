@@ -80,14 +80,31 @@ class TranscribeYouTubePolicy(Policy):
 # Create FastMCP server
 mcp = FastMCP("pocket-joe-mcp-toys")
 
-# Initialize pocket-joe context
-runner = InMemoryRunner()
-class AppContext(BaseContext):
-    def __init__(self, runner):
-        super().__init__(runner)
-        self.transcribe_yt = self._bind(TranscribeYouTubePolicy)
+# Global context
+runner = None
+ctx = None
 
-ctx = AppContext(runner)
+# =============================================================================
+# STARTUP AND CLEANUP
+# =============================================================================
+
+async def startup():
+    """Initialize the application."""
+    global runner, ctx
+    runner = InMemoryRunner()
+    
+    class AppContext(BaseContext):
+        def __init__(self, runner):
+            super().__init__(runner)
+            self.transcribe_yt = self._bind(TranscribeYouTubePolicy)
+    
+    ctx = AppContext(runner)
+
+async def cleanup():
+    """Clean up resources."""
+    global runner, ctx
+    runner = None
+    ctx = None
 
 
 @mcp.tool()
@@ -120,18 +137,26 @@ if __name__ == "__main__":
     if is_stdio_mode:
         # Run in stdio mode for local MCP clients
         async def run_server():
-            await mcp.run_stdio_async()
+            await startup()
+            try:
+                await mcp.run_stdio_async()
+            finally:
+                await cleanup()
         
         asyncio.run(run_server())
     else:
         # Run in HTTP mode for Railway/web deployment
         print(f"Running MCP HTTP server on port {port}")
         async def run_server():
-            await mcp.run_http_async(
-                host="0.0.0.0",
-                port=port,
-                path="/",
-                log_level="debug"
-            )
+            await startup()
+            try:
+                await mcp.run_http_async(
+                    host="0.0.0.0",
+                    port=port,
+                    path="/",
+                    log_level="debug"
+                )
+            finally:
+                await cleanup()
         
         asyncio.run(run_server())
