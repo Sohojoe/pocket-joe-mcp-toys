@@ -8,7 +8,7 @@ import requests
 import uvicorn
 from bs4 import BeautifulSoup
 from mcp.server import Server
-from mcp.server.sse import SseServerTransport
+from mcp.server.streamable_http import StreamableHTTPServerTransport
 from mcp.types import Tool
 from starlette.applications import Starlette
 from starlette.routing import Route
@@ -117,10 +117,10 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> dict[str, Any]:
     return {"error": "Policy returned no result"}
 
 
-# SSE endpoint handler
-async def handle_sse(request):
-    """Handle SSE transport for MCP."""
-    async with SseServerTransport("/messages") as transport:
+# StreamableHTTP endpoint handler
+async def handle_mcp(request):
+    """Handle StreamableHTTP transport for MCP."""
+    async with StreamableHTTPServerTransport(request) as transport:
         await mcp.run(
             transport.read_stream,
             transport.write_stream,
@@ -139,7 +139,7 @@ async def health_check(request):
         "mcp_version": "1.0",
         "tools": [spec.name],
         "endpoints": {
-            "sse": "/sse",
+            "mcp": "/mcp",
             "health": "/"
         },
         "supported_clients": [
@@ -156,7 +156,7 @@ async def health_check(request):
 app = Starlette(
     routes=[
         Route("/", endpoint=health_check),
-        Route("/sse", endpoint=handle_sse),
+        Route("/mcp", endpoint=handle_mcp, methods=["POST"]),
     ]
 )
 
