@@ -24,14 +24,14 @@ Built using `pocket-joe` policies and deployed to Railway.
 ### Steps
 
 1. **Push this repo to GitHub**
-   ```bash
+```bash
    cd pocket-joe-mcp-toys
    git init
    git add .
    git commit -m "Initial commit"
    git remote add origin https://github.com/YOUR_USERNAME/pocket-joe-mcp-toys.git
    git push -u origin main
-   ```
+```
 
 2. **Deploy to Railway**
    - Go to [Railway Dashboard](https://railway.app/dashboard)
@@ -47,12 +47,11 @@ Built using `pocket-joe` policies and deployed to Railway.
 ## Use in Claude Desktop
 
 Add to your Claude Desktop config at `~/Library/Application Support/Claude/claude_desktop_config.json`:
-
 ```json
 {
   "mcpServers": {
     "youtube": {
-      "url": "https://your-app.railway.app/sse"
+      "url": "https://your-app.railway.app/mcp"
     }
   }
 }
@@ -63,7 +62,6 @@ Restart Claude Desktop and you'll see the YouTube transcription tool available.
 ## Local Development
 
 ### Setup with uv
-
 ```bash
 # Install uv if you haven't
 curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -77,25 +75,27 @@ uv sync
 uv run python main.py
 ```
 
-Server runs at `http://localhost:8000/sse`
+Server runs at `http://localhost:8000/mcp`
 
 ### Test locally with Claude Desktop
 
-Use `http://localhost:8000/sse` in your config during development.
+Use `http://localhost:8000/mcp` in your config during development.
 
 ## Architecture
 
 This uses `pocket-joe`'s policy system:
+
 - **Policy**: `TranscribeYouTubePolicy` - handles video transcription
-- **MCP Adapter**: Wraps policy as MCP tool
-- **Transport**: SSE (Server-Sent Events) for Railway
+- **AppContext**: Manages policy instances and bindings
+- **FastMCP**: Wraps policies as MCP tools with `@mcp.tool()` decorator
+- **Transport**: Streamable HTTP for Railway
 - **Deployment**: Stateless (scales horizontally)
 
 ## Railway Configuration
 
 - **Runtime**: Python 3.12
-- **Package Manager**: uv (auto-detected)
-- **Entry Point**: `Procfile` → `python main.py`
+- **Package Manager**: uv (auto-detected via `pyproject.toml`)
+- **Entry Point**: `python main.py`
 - **Port**: Auto-assigned via `$PORT` env var
 
 ## Cost
@@ -103,16 +103,16 @@ This uses `pocket-joe`'s policy system:
 Railway Hobby plan:
 - $5/month credit
 - Enough for ~500k requests/month
-- Auto-sleep after inactivity (free tier)
+- Auto-sleep after inactivity
 - Custom domains included
 
 ## Adding More Tools
 
 To add more pocket-joe policies as MCP tools:
 
-1. Import your policy in `main.py`
-2. Add to the `list_tools()` function
-3. Update `call_tool()` to route by name
+1. Create your policy class in `main.py`
+2. Add to `AppContext` with `self._bind(YourPolicy)`
+3. Create a FastMCP tool with `@mcp.tool()` that calls your policy
 4. Push to GitHub (Railway auto-deploys)
 
 ## License

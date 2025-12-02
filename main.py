@@ -3,9 +3,6 @@
 
 import os
 import re
-import sys
-import asyncio
-from typing import Any
 
 import requests
 from bs4 import BeautifulSoup
@@ -13,7 +10,6 @@ from youtube_transcript_api import YouTubeTranscriptApi
 from fastmcp import FastMCP
 
 from pocket_joe import BaseContext, InMemoryRunner, Message, Policy, policy_spec_mcp_tool
-from pocket_joe.policy_spec_mcp import get_policy_spec
 
 
 def _extract_video_id(url: str) -> str | None:
@@ -77,92 +73,26 @@ class TranscribeYouTubePolicy(Policy):
                 )
             ]
 
+class AppContext(BaseContext):
+    def __init__(self, runner):
+        super().__init__(runner)
+        self.transcribe_yt = self._bind(TranscribeYouTubePolicy)
+runner = InMemoryRunner()
+ctx = AppContext(runner)
 
 # Create FastMCP server
 mcp = FastMCP("pocket-joe-mcp-toys")
 
-# Global context
-runner = None
-ctx = None
-
-# =============================================================================
-# STARTUP AND CLEANUP
-# =============================================================================
-
-async def startup():
-    """Initialize the application."""
-    global runner, ctx
-    print("Starting up MCP server...")
-    runner = InMemoryRunner()
-    
-    class AppContext(BaseContext):
-        def __init__(self, runner):
-            super().__init__(runner)
-            self.transcribe_yt = self._bind(TranscribeYouTubePolicy)
-    
-    ctx = AppContext(runner)
-    print("Startup complete!")
-
-async def cleanup():
-    """Clean up resources."""
-    global runner, ctx
-    runner = None
-    ctx = None
-
-
+# TODO: figure out a better mapping strategy to pocket-joe policies
 @mcp.tool()
-async def transcribe_youtube(url: str) -> dict[str, Any]:
+async def transcribe_yt(url: str) -> list[Message]:
     """
     Get video title, transcript and thumbnail from YouTube URL.
     
-    Args:
-        url: YouTube video URL
-        
-    Returns:
-        Dictionary containing title, transcript, thumbnail_url, and video_id
+    :param url: YouTube video URL
     """
-    msgs = await ctx.transcribe_yt(url=url)
-    
-    for msg in msgs:
-        if msg.type == "action_result":
-            if "error" in msg.payload:
-                raise RuntimeError(msg.payload["error"])
-            return msg.payload
-    
-    return {"error": "Policy returned no result"}
-
+    return await ctx.transcribe_yt(url)
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 8000))
-    is_deployment = os.getenv("PORT") is not None or os.getenv("RAILWAY_ENVIRONMENT") is not None
-    is_stdio_mode = not sys.stdin.isatty() and not is_deployment
-    
-    print(f"Environment: PORT={os.getenv('PORT')}, RAILWAY={os.getenv('RAILWAY_ENVIRONMENT')}")
-    print(f"Running mode: deployment={is_deployment}, stdio={is_stdio_mode}")
-    
-    if is_stdio_mode:
-        # Run in stdio mode for local MCP clients
-        async def run_server():
-            await startup()
-            try:
-                await mcp.run_stdio_async()
-            finally:
-                await cleanup()
-        
-        asyncio.run(run_server())
-    else:
-        # Run in HTTP mode for Railway/web deployment
-        print(f"Running MCP HTTP server on port {port}")
-        async def run_server():
-            await startup()
-            try:
-                await mcp.run_http_async(
-                    host="0.0.0.0",
-                    port=port,
-                    path="/",
-                    log_level="debug"
-                )
-            finally:
-                await cleanup()
-        
-        asyncio.run(run_server())
+    mcp.run(transport="http", host="0.0.0.0", port=port)
