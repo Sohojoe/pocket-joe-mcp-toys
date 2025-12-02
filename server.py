@@ -91,7 +91,7 @@ async def transcribe_yt(url: str) -> list[Message]:
     
     :param url: YouTube video URL
     """
-    return await ctx.transcribe_yt(url)
+    return await ctx.transcribe_yt(url=url)
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 8000))
