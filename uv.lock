@@ -571,14 +571,10 @@ wheels = [
 
 [[package]]
 name = "pocket-joe"
-version = "0.1.0.3"
+version = "0.2.0.5"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "fastmcp" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/38/4c/44fab7aef53e1fe84e8ec0536e74786d88dfe74d38cd75fc141484fbfeb2/pocket_joe-0.1.0.3.tar.gz", hash = "sha256:c20a4ccd299164bb31bfec78d0f7693efb7467a927d21a317d521a76f7753dbf", size = 96696 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/fe/a3/c86231a54d58d8bed9639f3740dd0ffdf32965d817885f692e9650365843/pocket_joe-0.1.0.3-py3-none-any.whl", hash = "sha256:a03dc77419bb6682dbc5918227970e028bd2f73f82af45af1ae9d14d2e6743c0", size = 9308 },
 ]
 
 [[package]]
@@ -597,7 +593,7 @@ dependencies = [
 requires-dist = [
     { name = "beautifulsoup4", specifier = ">=4.11.0" },
     { name = "fastmcp", specifier = ">=2.0.0" },
-    { name = "pocket-joe", specifier = ">=0.1.0.3" },
+    { name = "pocket-joe", specifier = ">=0.2.0.5" },
     { name = "requests", specifier = ">=2.28.0" },
     { name = "youtube-transcript-api", specifier = ">=0.6.0" },
 ]

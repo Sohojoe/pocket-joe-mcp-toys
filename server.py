@@ -9,7 +9,7 @@ from bs4 import BeautifulSoup
 from youtube_transcript_api import YouTubeTranscriptApi
 from fastmcp import FastMCP
 
-from pocket_joe import BaseContext, InMemoryRunner, Message, policy
+from pocket_joe import BaseContext, InMemoryRunner, policy
 
 
 def _extract_video_id(url: str) -> str | None:
@@ -20,7 +20,7 @@ def _extract_video_id(url: str) -> str | None:
 
 
 @policy.tool(description="Transcribe YouTube video and retrieve transcript and metadata")
-async def transcribe_youtube_policy(url: str) -> list[Message]:
+async def transcribe_youtube_policy(url: str) -> dict[str, str]:
     """
     Get video title, transcript and thumbnail from YouTube URL.
     
@@ -28,19 +28,11 @@ async def transcribe_youtube_policy(url: str) -> list[Message]:
         url: YouTube video URL
     
     Returns:
-        List containing a single Message with payload: {title, transcript, thumbnail_url, video_id}
-        or {error} on failure
+        Dictionary payload: {title, transcript, thumbnail_url, video_id} or {error} on failure.
     """
     video_id = _extract_video_id(url)
     if not video_id:
-        return [
-            Message(
-                id="",
-                actor="transcribe_youtube_policy",
-                type="action_result",
-                payload={"error": "Invalid YouTube URL"}
-            )
-        ]
+        return {"error": "Invalid YouTube URL"}
     
     try:
         response = requests.get(url, timeout=10)
@@ -54,28 +46,14 @@ async def transcribe_youtube_policy(url: str) -> list[Message]:
         fetched_transcript = ytt_api.fetch(video_id)
         transcript = " ".join([snippet.text for snippet in fetched_transcript])
         
-        return [
-            Message(
-                id="",
-                actor="transcribe_youtube_policy",
-                type="action_result",
-                payload={
-                    "title": title,
-                    "transcript": transcript,
-                    "thumbnail_url": thumbnail_url,
-                    "video_id": video_id
-                }
-            )
-        ]
+        return {
+            "title": title,
+            "transcript": transcript,
+            "thumbnail_url": thumbnail_url,
+            "video_id": video_id
+        }
     except Exception as e:
-        return [
-            Message(
-                id="",
-                actor="transcribe_youtube_policy",
-                type="action_result",
-                payload={"error": str(e)}
-            )
-        ]
+        return {"error": str(e)}
 
 class AppContext(BaseContext):
     def __init__(self, runner):
